@@ -1,100 +1,179 @@
-# InAppStory
+Google I/O Android App (ARCHIVED)
+======================
 
-A library for embedding stories into an application with customization.
+## 2023 Update
 
-## Requirements
+**This repository has been archived.** The Google I/O app has guided online and in-person visitors through the Google I/O conference for 10 years since 2009. It has also helped thousands of developers as an open-source sample. 
 
-The minimum SDK version is 21 (Android 5.0).
+To follow Modern Android Development best practices, check out the [Now in Android](https://github.com/android/nowinandroid) repository, which replaces iosched as our real-world sample. 
 
-The library is intended for Phone and Tablet projects (not intended for Android TV or Android Wear applications).
+## 2021 Update
 
-## Adding to the project
+**Due to global events, Google I/O 2020 was canceled and Google I/O 2021 is an online-only event, so
+the companion app hasn't been updated since 2019. However, the `iosched` team has continued
+adding several architecture improvements to its codebase.
+The general look and feel of the app is unchanged, and the app
+still uses the data from Google I/O 2019.**
 
-Add jitpack maven repo to the root `build.gradle` in the `repositories` section :
-```gradle
-allprojects {
-	repositories {
-		...
-		maven { url 'https://jitpack.io' }
-	}
-}
+Major improvements implemented in 2021:
+* Migration from LiveData to Kotlin Flows to observe data.
+* Support for large screens and other form factors.
+* Migration from SharedPreferences to [Jetpack DataStore](https://developer.android.com/topic/libraries/architecture/datastore).
+* (Experimental) Partial migration to Jetpack Compose
+(in the [`compose`](https://github.com/google/iosched/tree/compose) branch)
+
+# Description
+Google I/O is a developer conference with several days of deep
+technical content featuring technical sessions and hundreds of demonstrations
+from developers showcasing their technologies.
+
+This project is the Android app for the conference.
+
+# Running the app
+
+The project contains a `staging` variant that replaces some modules at compile time so they
+don't depend on remote services such as Firebase. This allows you to try out and test the app
+without the API keys.
+
+# Features
+
+The app displays a list of conference events - sessions, office hours, app
+reviews, codelabs, etc. - and allows the user to filter these events by event
+types and by topics (Android, Firebase, etc.). Users can see details about
+events, and they can star events that interest them. Conference attendees can
+reserve events to guarantee a seat.
+
+Other features include a Map of the venue, informational pages to
+guide attendees during the conference in Info, and time-relevant information
+during the conference in Home.
+
+<div>
+  <img align="center" src="schedule.png" alt="Schedule screenshot" height="640" width="320">
+</div>
+
+# Development Environment
+
+The app is written entirely in Kotlin and uses the Gradle build system.
+
+To build the app, use the `gradlew build` command or use "Import Project" in
+Android Studio. Android Studio Arctic Fox or newer is required and may be downloaded
+[here](https://developer.android.com/studio/preview).
+
+# Architecture
+
+The architecture is built around
+[Android Architecture Components](https://developer.android.com/topic/libraries/architecture/)
+and follows the recommendations laid out in the
+[Guide to App Architecture](https://developer.android.com/jetpack/docs/guide). Logic is kept away
+from Activities and Fragments and moved to
+[ViewModel](https://developer.android.com/topic/libraries/architecture/viewmodel)s.
+Data is observed using
+[Kotlin Flows](https://developer.android.com/kotlin/flow/stateflow-and-sharedflow)
+and the [Data Binding Library](https://developer.android.com/topic/libraries/data-binding/)
+binds UI components in layouts to the app's data sources.
+
+The Repository layer handles data operations. IOSched's data comes
+from a few different sources -  user data is stored in
+[Cloud Firestore](https://firebase.google.com/docs/firestore/)
+(either remotely or in
+a local cache for offline use), user preferences and settings are stored in
+DataStore, conference data is stored remotely and is fetched and stored
+in memory for the app to use, etc. - and the repository modules
+are responsible for handling all data operations and abstracting the data sources
+from the rest of the app.
+
+A lightweight domain layer sits between the data layer
+and the presentation layer, and handles discrete pieces of business logic off
+the UI thread. See the `.\*UseCase.kt` files under `shared/domain` for
+[examples](https://github.com/google/iosched/search?q=UseCase&unscoped_q=UseCase).
+
+The [Navigation component](https://developer.android.com/guide/navigation) is used
+to implement navigation in the app, handling Fragment transactions and providing a consistent
+user experience.
+
+[Room](https://developer.android.com/jetpack/androidx/releases/room) is used
+for Full Text Search using [Fts4](https://developer.android.com/reference/androidx/room/Fts4)
+to search for a session, speaker, or codelab.
+
+UI tests are written with [Espresso](https://developer.android.com/training/testing/espresso/)
+and unit tests use Junit4 with
+[Mockito](https://github.com/mockito/mockito) when necessary.
+
+The [Jetpack Benchmark library](https://developer.android.com/studio/profile/benchmark)
+makes it easy to benchmark your code from within Android Studio.
+The library handles warmup, measures your code performance, and outputs benchmarking
+results to the Android Studio console. We added a few benchmark tests around
+critical paths during app startup - in particular, the parsing of the bootstrap
+data. This enables us to automate measuring and monitoring initial startup time.
+Here is an example from a benchmark run:
+
+```
+Started running tests
+
+Connected to process 30763 on device 'google-pixel_3'.
+benchmark:
+benchmark:    76,076,101 ns BootstrapConferenceDataSourceBenchmark.benchmark_json_parsing
+Tests ran to completion.
 ```
 
-In the project `build.gradle` (app level) in the `dependencies` section add:
-```gradle
-implementation 'com.github.inappstory:android-sdk:1.20.7'
-```
+Dependency Injection is implemented with
+[Hilt](https://developer.android.com/training/dependency-injection/hilt-android). For more details
+on migrating from *dagger-android* to Hilt, read the
+([migration article](https://medium.com/androiddevelopers/migrating-the-google-i-o-app-to-hilt-f3edf03affe5).
 
-Also for correct work in `dependencies` you need to add:
-```gradle
-implementation 'androidx.recyclerview:recyclerview:1.2.1'
-implementation 'androidx.webkit:webkit:1.4.0'
-```
+[ViewPager2](https://developer.android.com/training/animation/screen-slide-2) offers enhanced functionality over the
+original ViewPager library, such as right-to-left and vertical orientation support.
+For more details on migrating from ViewPager to ViewPager2, please see this
+[migration guide](https://developer.android.com/training/animation/vp2-migration).
 
-## ProGuard
+## Firebase
 
-If your project uses `ProGuard` obfuscation, add following rules to proguard config file:
+The app makes considerable use of the following Firebase components:
 
-```gradle
--keepattributes *Annotation*
+- [Cloud Firestore](https://firebase.google.com/docs/firestore/) is our source
+for all user data (events starred or reserved by a user). Firestore gave us
+automatic sync  and also seamlessly managed offline functionality
+for us.
+- [Firebase Cloud Functions](https://firebase.google.com/docs/functions/)
+allowed us to run backend code. The reservations feature heavily depended on Cloud
+Functions working in conjuction with Firestore.
+- [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging/concept-options)
+let us inform the app about changes to conference data on our server.
+- [Remote Config](https://firebase.google.com/docs/remote-config/) helped us
+manage in-app constants.
 
--keepclassmembers class fqcn.of.javascript.interface.for.webview {
-	public *;
-}
+For 2020, the implementation was migrated to the Firebase Kotlin extension (KTX) libraries to
+write more idiomatic Kotlin code when calling Firebase APIs. To learn more,
+read this
+[Firebase blog article](https://firebase.googleblog.com/2020/03/firebase-kotlin-ga.html)
+on the Firebase KTX libraries.
 
--keep class com.inappstory.sdk.** {
-	*;
-}
-```
+## Kotlin
 
-## Getting started
+The app is entirely written in Kotlin and uses Jetpack's
+[Android Ktx extensions](https://developer.android.com/kotlin/ktx).
 
-### SDK Initialization
+Asynchronous tasks are handled with
+[coroutines](https://developer.android.com/kotlin/coroutines). Coroutines allow for simple
+and safe management of one-shot operations as well as building and consuming streams of data using
+[Kotlin Flows](https://developer.android.com/kotlin/flow).
 
-SDK has to be initialized only in Application class through method `InAppStoryManager.initSdk(context: Context)`.
-Then, from any class (Application, Activity, Fragment, etc.) you need to call `InAppStoryManager.Builder(). ... .create()`:
+All build scripts are written with the
+[Kotlin DSL](https://docs.gradle.org/current/userguide/kotlin_dsl.html).
 
-```kotlin
-fun initInAppStorySdk(context: Context) { //Have to call from Application class and pass application context
-    InAppStoryManager.initSdk(context)
-}
+# Copyright
 
-fun createInAppStoryManager(
-    apiKey: String,
-    userId: String
-): InAppStoryManager {
-    return InAppStoryManager.Builder()
-        .apiKey(apiKey)
-        .userId(userId)
-        .create()
-}
-```
+    Copyright 2014 Google Inc. All rights reserved.
 
-**Context and userId - is not optional parameters. UserId can't be longer than 255 characters.** Api key is a SDK authorization key. It can be set through `Builder` or in `values/constants.xml`
-```xml
-<string name="csApiKey">xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</string>
-```
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-You can also specify another SDK settings for `InAppStoryManager.Builder`
+        http://www.apache.org/licenses/LICENSE-2.0
 
-After initialization you can use `InAppStoryManager` class via `InAppStoryManager.getInstance()`.
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
 
-### Add StoriesList and load stories
-
-`StoriesList` is extends RecyclerView class and can be added like any `View` class. For example - via xml
-
-```xml
-<com.inappstory.sdk.stories.ui.list.StoriesList
-	android:layout_width="match_parent"
-	android:layout_height="wrap_content"
-	android:id="@+id/stories_list"/>
-```
-
-After SDK initialization you can load stories in `StoriesList`
-
-```kotlin
-storiesList.loadStories(); 
-```
-This method also can be used to reload list (for example in PtR case)
-
-For more information you can read [full SDK guide](https://docs.inappstory.ru/sdk-guides/android/how-to-get-started.html) or check [Samples](https://github.com/inappstory/Android-Example).
